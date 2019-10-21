@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from utils import load_data, accuracy
+from dataset import load_data
 from models import GAT, SpGAT
 
 # Training settings
@@ -47,14 +47,14 @@ adj, features, labels, idx_train, idx_val, idx_test = load_data()
 if args.sparse:
     model = SpGAT(nfeat=features.shape[1], 
                 nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
+                nclass=labels.shape[1],
                 dropout=args.dropout, 
                 nheads=args.nb_heads, 
                 alpha=args.alpha)
 else:
     model = GAT(nfeat=features.shape[1], 
                 nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
+                nclass=labels.shape[1],
                 dropout=args.dropout, 
                 nheads=args.nb_heads, 
                 alpha=args.alpha)
@@ -73,14 +73,14 @@ if args.cuda:
 
 features, adj, labels = Variable(features), Variable(adj), Variable(labels)
 
+print(labels.shape)
 
 def train(epoch):
     t = time.time()
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
-    loss_train = F.nll_loss(output[idx_train], labels[idx_train])
-    acc_train = accuracy(output[idx_train], labels[idx_train])
+    loss_train = F.mse_loss(output[idx_train], labels[idx_train])
     loss_train.backward()
     optimizer.step()
 
@@ -90,13 +90,10 @@ def train(epoch):
         model.eval()
         output = model(features, adj)
 
-    loss_val = F.nll_loss(output[idx_val], labels[idx_val])
-    acc_val = accuracy(output[idx_val], labels[idx_val])
+    loss_val = F.mse_loss(output[idx_val], labels[idx_val])
     print('Epoch: {:04d}'.format(epoch+1),
           'loss_train: {:.4f}'.format(loss_train.data.item()),
-          'acc_train: {:.4f}'.format(acc_train.data.item()),
           'loss_val: {:.4f}'.format(loss_val.data.item()),
-          'acc_val: {:.4f}'.format(acc_val.data.item()),
           'time: {:.4f}s'.format(time.time() - t))
 
     return loss_val.data.item()
@@ -105,11 +102,9 @@ def train(epoch):
 def compute_test():
     model.eval()
     output = model(features, adj)
-    loss_test = F.nll_loss(output[idx_test], labels[idx_test])
-    acc_test = accuracy(output[idx_test], labels[idx_test])
+    loss_test = F.mse_loss(output[idx_test], labels[idx_test])
     print("Test set results:",
-          "loss= {:.4f}".format(loss_test.data[0]),
-          "accuracy= {:.4f}".format(acc_test.data[0]))
+          "loss= {:.4f}".format(loss_test.data[0]))
 
 # Train model
 t_total = time.time()
