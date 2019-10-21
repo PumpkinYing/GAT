@@ -15,6 +15,7 @@ from torch.autograd import Variable
 
 from dataset import load_data
 from models import GAT, SpGAT
+import matplotlib.pyplot as plt
 
 # Training settings
 parser = argparse.ArgumentParser()
@@ -73,8 +74,6 @@ if args.cuda:
 
 features, adj, labels = Variable(features), Variable(adj), Variable(labels)
 
-print(labels.shape)
-
 def train(epoch):
     t = time.time()
     model.train()
@@ -104,7 +103,18 @@ def compute_test():
     output = model(features, adj)
     loss_test = F.mse_loss(output[idx_test], labels[idx_test])
     print("Test set results:",
-          "loss= {:.4f}".format(loss_test.data[0]))
+          "loss= {:.4f}".format(loss_test.data.item()))
+
+    plt.subplot(2,1,1)
+    mx_idx = output.shape[0]
+    plt.plot(range(mx_idx), output.cpu().detach()[:mx_idx,0], label='output')
+    plt.plot(range(mx_idx), labels.cpu().detach()[:mx_idx,0], label='true')
+    plt.legend(loc=3)
+    plt.subplot(2,1,2)
+    plt.plot(range(mx_idx), output.cpu().detach()[:mx_idx,1], label='output')
+    plt.plot(range(mx_idx), labels.cpu().detach()[:mx_idx,1], label='true')
+    plt.legend(loc=3)
+    plt.show()
 
 # Train model
 t_total = time.time()
